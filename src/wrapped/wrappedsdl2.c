@@ -644,6 +644,22 @@ int EXPORT my2_SDL_DYNAPI_entry(x86emu_t* emu, uint32_t version, uintptr_t *tabl
     #include "SDL_dynapi_procs.h"
     return 0;
 }
+
+EXPORT void *my2_SDL_CreateWindow(x86emu_t* emu, const char *title, int x, int y, int w, int h, uint32_t flags)
+{
+    sdl2_my_t *my = (sdl2_my_t *)emu->context->sdl2lib->priv.w.p2;
+    void *win = NULL;
+
+    // Set ES 3.1
+    my->SDL_GL_SetAttribute(21, 4);
+    my->SDL_GL_SetAttribute(17, 3); 
+    my->SDL_GL_SetAttribute(18, 1); 
+
+    win = my->SDL_CreateWindow(title, 0, 0, -1, -1, flags | 2);
+    printf("my2_SDL_CreateWindow: %s %d %d %d %d %04X\n", title, x, y, w, h, flags | 2);
+    return win;
+}
+
 char EXPORT *my2_SDL_GetBasePath(x86emu_t* emu) {
     char* p = strdup(emu->context->fullpath);
     char* b = strrchr(p, '/');

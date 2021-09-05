@@ -746,6 +746,7 @@ EXPORT void my2_SDL_Log(x86emu_t* emu, void* fmt, void *b) {
     #endif
 }
 
+EXPORT void* my_glXGetProcAddress(x86emu_t* emu, void* name);
 void fillGLProcWrapper(box86context_t*);
 extern char* libGL;
 EXPORT void* my2_SDL_GL_GetProcAddress(x86emu_t* emu, void* name) 
@@ -775,8 +776,16 @@ EXPORT void* my2_SDL_GL_GetProcAddress(x86emu_t* emu, void* name)
         strcpy(tmp, "my_");
         strcat(tmp, rname);
         symbol = dlsym(emu->context->box86lib, tmp);
-    } else 
-        symbol = my->SDL_GL_GetProcAddress(name);
+    } else {
+        char buf[200] = {};
+            symbol = my_glXGetProcAddress(emu, name);
+            // Attempt first to load from glxGetProcAddress (e.g., would come from gl4es)
+            if (symbol)
+                return symbol;
+            // Couldn't find any, try from SDL now
+            else
+                symbol = my->SDL_GL_GetProcAddress(name);
+    }
     if(!symbol) {
         if(dlsym_error && box86_log<LOG_DEBUG) printf_log(LOG_NONE, "%p\n", NULL);
         return NULL;    // easy

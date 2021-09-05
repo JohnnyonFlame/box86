@@ -746,6 +746,66 @@ EXPORT void my2_SDL_Log(x86emu_t* emu, void* fmt, void *b) {
     #endif
 }
 
+EXPORT int my2_SDL_GL_SetAttribute(x86emu_t* emu, uint32_t attr, int value) 
+{
+    sdl2_my_t *my = (sdl2_my_t *)emu->context->sdl2lib->priv.w.p2;    
+    return my->SDL_GL_SetAttribute(attr, value);
+}
+
+// Cut down and adapted from SDL_video.c
+EXPORT int my2_SDL_GL_ExtensionSupported(x86emu_t* emu, char *name) 
+{
+    sdl2_my_t *my = (sdl2_my_t *)emu->context->sdl2lib->priv.w.p2;
+    const char *(*glGetString_f)(uint32_t) = dlsym(my_glhandle, "glGetString");
+    const char *extensions;
+    const char *start;
+    const char *where, *terminator;
+
+    /* Extension names should not have spaces. */
+    where = strchr(name, ' ');
+    if (where || *name == '\0') {
+        return 0;
+    }
+
+    /* See if there's an environment variable override */
+    start = getenv(name);
+    if (start && *start == '0') {
+        return 0;
+    }
+
+    if (!glGetString_f) {
+        return 0;
+    }
+
+    #define GL_EXTENSIONS                     0x1F03
+    extensions = (const char *) glGetString_f(GL_EXTENSIONS);
+    if (!extensions) {
+        return 0;
+    }
+
+    /*
+     * It takes a bit of care to be fool-proof about parsing the OpenGL
+     * extensions string. Don't be fooled by sub-strings, etc.
+     */
+
+    start = extensions;
+
+    for (;;) {
+        where = strstr(start, name);
+        if (!where)
+            break;
+
+        terminator = where + strlen(name);
+        if (where == extensions || *(where - 1) == ' ')
+            if (*terminator == ' ' || *terminator == '\0')
+                return 1;
+
+        start = terminator;
+    }
+    
+    return my->SDL_GL_ExtensionSupported(name);
+}
+
 EXPORT void* my_glXGetProcAddress(x86emu_t* emu, void* name);
 void fillGLProcWrapper(box86context_t*);
 extern char* libGL;
